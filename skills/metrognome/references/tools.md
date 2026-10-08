@@ -111,7 +111,7 @@ agent-react-devtools profile diff <before.json> <after.json> [--threshold N]  # 
 
 ## metro-mcp (bundled MCP server)
 
-Connects to Metro via Chrome DevTools Protocol — **no app code changes** for most features. Works with Expo, bare RN, anything on Metro + Hermes. Bundled via `.mcp.json` (`npx -y metro-mcp@latest`); call tools directly as MCP tools (not via Bash).
+Connects to Metro via Chrome DevTools Protocol — **no app code changes** for most features. Works with Expo, bare RN, anything on Metro + Hermes. Bundled via `.mcp.json` (`npx -y metro-mcp@0.11.9`); call tools directly as MCP tools (not via Bash).
 
 **Expo / New Arch CDP gotchas** (verified: Expo SDK 55 / RN 0.83 / New Arch, June 2026):
 

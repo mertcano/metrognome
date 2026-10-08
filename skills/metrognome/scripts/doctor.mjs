@@ -180,6 +180,24 @@ function sh(cmd) {
   try { return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { return null; }
 }
 
+/**
+ * Block the current thread for `ms` milliseconds without shelling out.
+ *
+ * `Atomics.wait` on a `SharedArrayBuffer` is the standard cross-platform synchronous sleep: it
+ * blocks the calling thread on the main loop and needs no child process, so it works identically
+ * on Windows, macOS and Linux.
+ */
+function sleepSync(ms) {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  } catch {
+    // Some hardened runtimes disallow `Atomics.wait` on the main thread; fall back to a short
+    // busy yield rather than failing the probe outright.
+    const until = Date.now() + ms;
+    while (Date.now() < until) { /* spin */ }
+  }
+}
+
 // ── Module-level state (safe to evaluate before --self-test short-circuits) ───
 
 const repo = process.cwd();
@@ -219,7 +237,10 @@ function pollMetro(port, timeoutMs = 30000) {
     if (last.reachable) return last;
     const remaining = deadline - Date.now();
     if (remaining > 2000) {
-      try { execSync('sleep 2', { stdio: 'ignore' }); } catch {}
+      // Wait in-process rather than shelling out to POSIX `sleep`, which does not exist on
+      // Windows and whose failure was previously swallowed, causing the probe to run again
+      // immediately against a Metro server that had not finished starting.
+      sleepSync(2000);
     }
   }
   return last;
@@ -558,7 +579,7 @@ function main() {
   const ard = has('agent-react-devtools');
   console.log(`  ${ad ? ok(true) : warn} agent-device ${ad ? '' : '— install: npm i -g agent-device (or use npx)'}`);
   console.log(`  ${ard ? ok(true) : warn} agent-react-devtools ${ard ? '' : '— install: npm i -g agent-react-devtools (or use npx)'}`);
-  console.log(`  ${warn} metro-mcp — bundled via this plugin's .mcp.json (npx -y metro-mcp@latest); needs a LIVE Metro session to return data`);
+  console.log(`  ${warn} metro-mcp — bundled via this plugin's .mcp.json (npx -y metro-mcp@0.11.9); needs a LIVE Metro session to return data`);
   const rnbpInstalled = sh(`find "${os.homedir()}/.claude/plugins" -path "*/react-native-best-practices*" -name "*.md" -maxdepth 6 2>/dev/null | head -1`);
   console.log(`  ${rnbpInstalled ? ok(true) : warn} react-native-best-practices${rnbpInstalled ? '' : ' — install: /plugin install react-native-best-practices@callstack-agent-skills'}`);
 
